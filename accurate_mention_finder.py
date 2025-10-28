@@ -161,15 +161,15 @@ def load_cached_mention_markets(filename: str = "high_volume_mention_markets.jso
         return []
 
 
-def generate_high_volume_cache(api_key: str, min_volume: int = 1000):
+def generate_high_volume_cache(api_key: str, min_volume: int = 0):
     """
-    Generate a high-volume mention markets cache file.
+    Generate a cache file with all mention markets (not filtered by volume to get all events).
     
     Args:
         api_key: Kalshi API key
-        min_volume: Minimum volume threshold for inclusion
+        min_volume: Minimum volume threshold for inclusion (default 0 to get all)
     """
-    print("Fetching mention markets...")
+    print("Fetching ALL mention markets (no volume filter to capture all events)...")
     all_markets = get_active_mention_markets(api_key)
     search_markets = get_mention_markets_by_direct_search(api_key)
     
@@ -183,28 +183,24 @@ def generate_high_volume_cache(api_key: str, min_volume: int = 1000):
     
     all_markets = list(unique_markets.values())
     
-    # Filter by volume AND status (only open/active markets)
-    # Kalshi API returns status as 'open' not 'active'
-    high_volume = [
+    # Filter by status only (only open/active markets)
+    active_markets = [
         m for m in all_markets 
-        if m.get('volume', 0) >= min_volume 
-        and m.get('status') in ['open', 'active']
+        if m.get('status') in ['open', 'active']
     ]
     
-    # Sort by volume descending
-    high_volume.sort(key=lambda x: x.get('volume', 0), reverse=True)
+    # Sort by volume descending to prioritize high-volume markets
+    active_markets.sort(key=lambda x: x.get('volume', 0), reverse=True)
     
-    # Limit to top 50-60 markets by volume to match Kalshi's display
-    high_volume = high_volume[:60]
-    
-    print(f"Found {len(high_volume)} high-volume mention markets (min volume: {min_volume:,})")
+    print(f"Found {len(active_markets)} active mention markets")
+    print(f"Events: {len(set(m.get('event_ticker') for m in active_markets))}")
     
     # Save to cache
     with open('high_volume_mention_markets.json', 'w') as f:
-        json.dump(high_volume, f, indent=2)
+        json.dump(active_markets, f, indent=2)
     
     print(f"Saved to high_volume_mention_markets.json")
-    return high_volume
+    return active_markets
 
 
 if __name__ == "__main__":
