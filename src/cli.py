@@ -852,7 +852,7 @@ class KalshiResearchCLI:
             if yes_edge_markets:
                 console.print(f"\n[bold green]📈 YES Edge Opportunities (Historical Hit Rate > Market Price)[/bold green]")
                 console.print("  [dim]Term | Hit Rate | YES Bid/Ask | NO Bid/Ask | Expected Value | Edge[/dim]")
-                console.print("  " + "-" * 85)
+                console.print("  " + "-" * 120)
                 
                 for market_data in yes_edge_markets:
                     ev_analysis = market_data['ev_analysis']
@@ -863,13 +863,13 @@ class KalshiResearchCLI:
                     no_bid = market.get('no_bid', 0) / 100 if market.get('no_bid', 0) else 0
                     no_ask = market.get('no_ask', 0) / 100 if market.get('no_ask', 0) else 0
                     
-                    console.print(f"  {market_data['bet_word'][:15]:<15} | {market_data['hit_rate']:>7.1%} | {yes_bid:>4.3f}/{yes_ask:<4.3f} | {no_bid:>4.3f}/{no_ask:<4.3f} | {ev_analysis['yes_expected_value']:>13.3f} | {ev_analysis['yes_edge']:>6.3f}")
+                    console.print(f"  {market_data['bet_word'][:25]:<25} | {market_data['hit_rate']:>7.1%} | {yes_bid:>4.3f}/{yes_ask:<4.3f} | {no_bid:>4.3f}/{no_ask:<4.3f} | {ev_analysis['yes_expected_value']:>13.3f} | {ev_analysis['yes_edge']:>6.3f}")
             
             # Display NO Edge Opportunities
             if no_edge_markets:
                 console.print(f"\n[bold red]📉 NO Edge Opportunities (Historical Hit Rate < Market Price)[/bold red]")
                 console.print("  [dim]Term | Hit Rate | YES Bid/Ask | NO Bid/Ask | Expected Value | Edge[/dim]")
-                console.print("  " + "-" * 85)
+                console.print("  " + "-" * 120)
                 
                 for market_data in no_edge_markets:
                     ev_analysis = market_data['ev_analysis']
@@ -880,7 +880,7 @@ class KalshiResearchCLI:
                     no_bid = market.get('no_bid', 0) / 100 if market.get('no_bid', 0) else 0
                     no_ask = market.get('no_ask', 0) / 100 if market.get('no_ask', 0) else 0
                     
-                    console.print(f"  {market_data['bet_word'][:15]:<15} | {market_data['hit_rate']:>7.1%} | {yes_bid:>4.3f}/{yes_ask:<4.3f} | {no_bid:>4.3f}/{no_ask:<4.3f} | {ev_analysis['no_expected_value']:>13.3f} | {ev_analysis['no_edge']:>6.3f}")
+                    console.print(f"  {market_data['bet_word'][:25]:<25} | {market_data['hit_rate']:>7.1%} | {yes_bid:>4.3f}/{yes_ask:<4.3f} | {no_bid:>4.3f}/{no_ask:<4.3f} | {ev_analysis['no_expected_value']:>13.3f} | {ev_analysis['no_edge']:>6.3f}")
             
             # Summary
             total_opportunities = len(yes_edge_markets) + len(no_edge_markets)
