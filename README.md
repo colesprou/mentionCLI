@@ -257,5 +257,3 @@ MIT License - see LICENSE file for details
 - Questions: Open a discussion
 
 ---
-
-**Built with ❤️ for finding edge in prediction markets**
