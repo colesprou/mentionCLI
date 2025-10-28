@@ -1163,8 +1163,72 @@ class KalshiResearchCLI:
             console.print(f"\n[bold]Critical Analysis & Decision Framework:[/bold]")
             console.print(analysis)
             
+            # Ask if user wants to ask questions
+            console.print(f"\n[bold]💬 Interactive Q&A[/bold]")
+            console.print("You can ask follow-up questions about the analysis and transcript data.")
+            answer = Prompt.ask("Would you like to ask a question? (y/n)", default="n")
+            
+            if answer.lower() == 'y':
+                await self._interactive_qa(term, event_title, earnings_data, analysis)
+            
         except Exception as e:
             console.print(f"  [red]Error generating critical analysis: {e}[/red]")
+    
+    async def _interactive_qa(self, term: str, event_title: str, earnings_data: Dict, previous_analysis: str):
+        """Interactive Q&A session with the AI."""
+        if not self.ai_analyzer:
+            console.print("  [yellow]AI analyzer not configured.[/yellow]")
+            return
+        
+        while True:
+            question = Prompt.ask("\n💬 Your question (or 'q' to quit)")
+            
+            if question.lower() == 'q':
+                break
+            
+            try:
+                # Prepare comprehensive context
+                data_context = f"""
+                PREVIOUS ANALYSIS:
+                {previous_analysis}
+                
+                HISTORICAL EARNINGS DATA:
+                - Hit Rate: {earnings_data.get('hit_rate', 0):.1%}
+                - Total Mentions: {earnings_data.get('total_mentions', 0)}
+                - Quarters Analyzed: {earnings_data.get('quarters_analyzed', 0)}
+                - Quarters with Mentions: {earnings_data.get('quarters_with_mentions', 0)}
+                - Current Streak: {earnings_data.get('current_streak', {}).get('type', 'N/A')} streak of {earnings_data.get('current_streak', {}).get('length', 0)} quarters
+                
+                HISTORICAL CONTEXT BY QUARTER:
+                """
+                
+                # Add relevant quarter context
+                mentions_by_quarter = earnings_data.get('mentions_by_quarter', {})
+                for quarter, data in list(mentions_by_quarter.items())[:5]:  # Show last 5 quarters
+                    if data['count'] > 0:
+                        data_context += f"\n{quarter}: {data['count']} mentions"
+                        for mention in data['mentions'][:2]:
+                            context = mention['context'][:200] + "..." if len(mention['context']) > 200 else mention['context']
+                            data_context += f"\n  - \"{mention['full_match']}\" in context: {context}"
+                
+                prompt = f"""
+                You are a quantitative analyst helping with a follow-up question about the term "{term}" in the earnings call for "{event_title}".
+                
+                USER'S QUESTION:
+                {question}
+                
+                CONTEXT:
+                {data_context}
+                
+                Please provide a clear, data-driven answer based on the historical context and analysis above.
+                """
+                
+                answer = await self.ai_analyzer.generate_summary(prompt)
+                console.print(f"\n[bold]📊 Answer:[/bold]")
+                console.print(answer)
+                
+            except Exception as e:
+                console.print(f"  [red]Error: {e}[/red]")
     
     async def _analyze_news_sources(self, term: str, event_title: str):
         """Scrape news sources for the term and event."""
