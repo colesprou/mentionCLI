@@ -155,6 +155,14 @@ class APINinjasClient:
     
     async def get_earnings_transcript(self, ticker: str, year: int, quarter: int) -> Optional[EarningsCall]:
         """Get earnings call transcript for a specific company and quarter"""
+        # Validate inputs
+        if not ticker or ticker is None:
+            logger.error(f"Invalid ticker: {ticker}")
+            return None
+        if year is None or quarter is None:
+            logger.error(f"Invalid year/quarter: {year}/{quarter}")
+            return None
+        
         url = f"{self.base_url}/earningstranscript"
         params = {
             'ticker': ticker.upper(),
