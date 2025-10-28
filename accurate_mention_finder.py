@@ -52,22 +52,29 @@ def get_active_mention_markets(api_key: str) -> List[Dict]:
             # Rate limit
             time.sleep(0.2)
         
-        # Filter for mention markets
-        # A mention market has "MENTION" in its ticker OR has a custom_strike field
+        # Filter for mention markets - specifically earnings mention markets
+        # A mention market has "EARNINGMENTION" in its ticker (earnings mention markets)
+        # OR "MENTION" in ticker with custom_strike (bet word markets like Trump says X)
         mention_markets = []
+        
+        print(f"Filtering {len(all_markets)} markets...")
+        
         for market in all_markets:
             ticker = market.get("ticker", "").upper()
+            event_ticker = market.get("event_ticker", "").upper()
             custom_strike = market.get("custom_strike")
             
             # Check if it's a mention market
-            is_mention = "MENTION" in ticker
-            
-            # Also include markets with custom_strike (bet words)
-            if custom_strike or market.get("strike_type") == "custom":
-                is_mention = True
+            # Earnings mention markets have "EARNINGSMENTION" in event_ticker or ticker (note: EARNINGSMENTION with S)
+            # Other mention markets have "MENTION" in ticker/event_ticker with custom_strike
+            is_mention = ("EARNINGSMENTION" in event_ticker) or ("EARNINGSMENTION" in ticker) or \
+                        ("MENTION" in ticker and custom_strike) or \
+                        ("MENTION" in event_ticker and custom_strike)
             
             if is_mention:
                 mention_markets.append(market)
+        
+        print(f"Found {len(mention_markets)} mention markets after filtering")
         
         return mention_markets
         
@@ -110,9 +117,14 @@ def get_mention_markets_by_direct_search(api_key: str) -> List[Dict]:
                 # Filter for mention markets
                 for market in markets:
                     ticker = market.get("ticker", "").upper()
+                    event_ticker = market.get("event_ticker", "").upper()
                     custom_strike = market.get("custom_strike")
                     
-                    is_mention = "MENTION" in ticker or custom_strike or market.get("strike_type") == "custom"
+                    # Earnings mention markets have "EARNINGSMENTION" in event_ticker or ticker
+                    # Other mention markets have "MENTION" with custom_strike
+                    is_mention = ("EARNINGSMENTION" in event_ticker) or ("EARNINGSMENTION" in ticker) or \
+                                ("MENTION" in ticker and custom_strike) or \
+                                ("MENTION" in event_ticker and custom_strike)
                     if is_mention:
                         found_markets.append(market)
                 
@@ -149,7 +161,7 @@ def load_cached_mention_markets(filename: str = "high_volume_mention_markets.jso
         return []
 
 
-def generate_high_volume_cache(api_key: str, min_volume: int = 50000):
+def generate_high_volume_cache(api_key: str, min_volume: int = 1000):
     """
     Generate a high-volume mention markets cache file.
     
@@ -171,11 +183,12 @@ def generate_high_volume_cache(api_key: str, min_volume: int = 50000):
     
     all_markets = list(unique_markets.values())
     
-    # Filter by volume AND status (only active markets)
+    # Filter by volume AND status (only open/active markets)
+    # Kalshi API returns status as 'open' not 'active'
     high_volume = [
         m for m in all_markets 
         if m.get('volume', 0) >= min_volume 
-        and m.get('status') == 'active'
+        and m.get('status') in ['open', 'active']
     ]
     
     # Sort by volume descending
