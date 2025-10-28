@@ -1869,9 +1869,80 @@ Note: The term "{search_term}" appears in the provided context excerpts above. A
                     console.print(f"[green]✅ Summary saved to: {filename}[/green]")
                 except Exception as e:
                     console.print(f"[red]Error saving summary: {e}[/red]")
+            
+            # Ask if user wants to ask follow-up questions
+            console.print(f"\n[bold]💬 Interactive Q&A[/bold]")
+            console.print("Ask questions about the transcript, search term context, or AI analysis.")
+            qa_choice = Prompt.ask("Would you like to ask a question? (y/n)", default="n")
+            
+            if qa_choice.lower() == 'y':
+                await self._transcript_qa(call, search_term, matches, summary)
                     
         except Exception as e:
             console.print(f"[red]Error generating AI summary: {e}[/red]")
+    
+    async def _transcript_qa(self, call, search_term: str, matches: List[Dict], previous_summary: str):
+        """Interactive Q&A about the transcript and analysis."""
+        if not self.ai_analyzer:
+            console.print("  [yellow]AI analyzer not configured.[/yellow]")
+            return
+        
+        while True:
+            question = Prompt.ask("\n💬 Your question (or 'q' to quit)")
+            
+            if question.lower() == 'q':
+                break
+            
+            try:
+                # Prepare context with matches
+                contexts_text = ""
+                for i, match in enumerate(matches[:5], 1):
+                    # Get a reasonable snippet around the match
+                    context = match['context']
+                    match_text = match.get('match_text', search_term)
+                    match_pos = context.lower().find(match_text.lower())
+                    
+                    if match_pos != -1 and len(context) > 500:
+                        chars_per_side = 250
+                        start = max(0, match_pos - chars_per_side)
+                        end = min(len(context), match_pos + len(match_text) + chars_per_side)
+                        snippet = context[start:end]
+                        if start > 0:
+                            snippet = "..." + snippet
+                        if end < len(context):
+                            snippet = snippet + "..."
+                    else:
+                        snippet = context[:500]
+                    
+                    contexts_text += f"\nMatch {i} (Line {match['line_number']}): {snippet}\n"
+                
+                prompt = f"""
+You are analyzing the transcript from {call.company_name}'s Q{call.quarter} {call.year} earnings call.
+
+USER'S QUESTION:
+{question}
+
+CONTEXT:
+{call.company_name} Q{call.quarter} {call.year}
+Date: {call.date}
+Search Term: "{search_term}"
+Total Matches: {len(matches)}
+
+TRANSCRIPT EXCERPTS WITH CONTEXT:
+{contexts_text}
+
+PREVIOUS AI ANALYSIS:
+{previous_summary}
+
+Please provide a clear, data-driven answer based on the transcript context and analysis above.
+"""
+                
+                answer = await self.ai_analyzer.generate_summary(prompt)
+                console.print(f"\n[bold]📊 Answer:[/bold]")
+                console.print(answer)
+                
+            except Exception as e:
+                console.print(f"  [red]Error: {e}[/red]")
     
     async def run_interactive_mode(self):
         """Run the interactive CLI mode."""
