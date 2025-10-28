@@ -141,6 +141,8 @@ class APINinjasClient:
     """Client for API Ninjas Earnings Call Transcript API"""
     
     def __init__(self, api_key: str):
+        if not api_key or api_key is None:
+            raise ValueError("API Ninjas API key is required. Set API_NINJAS_KEY environment variable.")
         self.api_key = api_key
         self.base_url = "https://api.api-ninjas.com/v1"
         self.session = None
