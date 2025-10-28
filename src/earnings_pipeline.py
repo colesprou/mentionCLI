@@ -81,26 +81,30 @@ class KalshiMentionMatcher:
     @staticmethod
     def _create_single_term_pattern(term: str) -> str:
         """Create regex pattern for a single term (no slashes)."""
-        # Escape special regex characters
-        escaped_term = re.escape(term.lower())
+        # Normalize the term
+        normalized_term = term.lower().strip()
         
-        # Handle plural and possessive forms
-        # Add 's' or 'es' for plurals
-        plural_pattern = f"{escaped_term}(?:s|es)?"
+        # Replace hyphens and spaces with flexible whitespace/hyphen pattern
+        # "Third Party Sellers" -> "third[-\s]+party[-\s]+sellers"
+        # This allows matching "third-party", "third party", "thirdparty", etc.
+        # Split into words first
+        words = re.split(r'[-\s]+', normalized_term)
         
-        # Handle possessive forms
-        possessive_pattern = f"{escaped_term}(?:'s|')?"
+        # Build pattern with flexible spacing between words
+        pattern_parts = []
+        for i, word in enumerate(words):
+            if i < len(words) - 1:
+                # Not the last word
+                pattern_parts.append(f"{word}")
+                pattern_parts.append(r"[-\s]+")
+            else:
+                # Last word - add plural/possessive handling
+                pattern_parts.append(f"{word}(?:s|es)?")
         
-        # Handle compound words (hyphenated or space-separated)
-        compound_pattern = f"(?:\\w+[-\\s])?{escaped_term}(?:[-\\s]\\w+)?"
+        pattern = ''.join(pattern_parts)
         
-        # Handle ordinal forms if term includes number
-        ordinal_pattern = escaped_term
-        if re.search(r'\d', term):
-            ordinal_pattern = f"{escaped_term}(?:st|nd|rd|th)?"
-        
-        # Combine all patterns
-        pattern = f"({plural_pattern}|{possessive_pattern}|{compound_pattern}|{ordinal_pattern})"
+        # Handle possessive at the very end
+        pattern += r"(?:'s)?"
         
         # Use word boundaries to avoid partial matches
         pattern = f"\\b{pattern}\\b"
