@@ -954,6 +954,7 @@ class KalshiResearchCLI:
                 console.print(f"  [green]Total Mentions: {term_data['total_mentions']}[/green]")
                 console.print(f"  [green]Quarters with Mentions: {term_data['quarters_with_mentions']}/{term_data['total_quarters_analyzed']}[/green]")
                 console.print(f"  [dim]Analyzing {quarters_back} quarters back[/dim]")
+                console.print(f"  [dim]Search term: '{term}'[/dim]")
                 
                 # Show mentions by quarter with context
                 console.print(f"\n  [bold]Mentions by Quarter:[/bold]")
