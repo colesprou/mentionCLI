@@ -1890,9 +1890,9 @@ IMPORTANT: Respond in plain text format only, not JSON. Just provide the analysi
             return
         
         while True:
-            question = Prompt.ask("\n💬 Your question (or 'q' to quit)")
+            question = Prompt.ask("\n💬 Your question", default="")
             
-            if question.lower() == 'q':
+            if not question or question.lower() == 'q':
                 break
             
             try:
