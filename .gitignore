@@ -66,6 +66,7 @@ logs/
 *.json
 !package.json
 !tsconfig.json
+!high_volume_mention_markets.json
 
 # Test files
 test_*.py

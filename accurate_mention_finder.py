@@ -147,6 +147,44 @@ def load_cached_mention_markets(filename: str = "high_volume_mention_markets.jso
         return []
 
 
+def generate_high_volume_cache(api_key: str, min_volume: int = 50000):
+    """
+    Generate a high-volume mention markets cache file.
+    
+    Args:
+        api_key: Kalshi API key
+        min_volume: Minimum volume threshold for inclusion
+    """
+    print("Fetching mention markets...")
+    all_markets = get_active_mention_markets(api_key)
+    search_markets = get_mention_markets_by_direct_search(api_key)
+    
+    # Combine and deduplicate
+    all_markets.extend(search_markets)
+    unique_markets = {}
+    for market in all_markets:
+        ticker = market.get('ticker')
+        if ticker and ticker not in unique_markets:
+            unique_markets[ticker] = market
+    
+    all_markets = list(unique_markets.values())
+    
+    # Filter by volume
+    high_volume = [m for m in all_markets if m.get('volume', 0) >= min_volume]
+    
+    # Sort by volume descending
+    high_volume.sort(key=lambda x: x.get('volume', 0), reverse=True)
+    
+    print(f"Found {len(high_volume)} high-volume mention markets (min volume: {min_volume:,})")
+    
+    # Save to cache
+    with open('high_volume_mention_markets.json', 'w') as f:
+        json.dump(high_volume, f, indent=2)
+    
+    print(f"Saved to high_volume_mention_markets.json")
+    return high_volume
+
+
 if __name__ == "__main__":
     # Test the functions
     import os
@@ -158,7 +196,6 @@ if __name__ == "__main__":
     if not api_key:
         print("KALSHI_API_KEY not found in environment")
     else:
-        print("Fetching active mention markets...")
-        markets = get_active_mention_markets(api_key)
-        print(f"Found {len(markets)} mention markets")
+        print("Generating high-volume cache...")
+        generate_high_volume_cache(api_key)
 
