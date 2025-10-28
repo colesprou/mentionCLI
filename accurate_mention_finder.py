@@ -52,19 +52,18 @@ def get_active_mention_markets(api_key: str) -> List[Dict]:
             # Rate limit
             time.sleep(0.2)
         
-        # Filter for mention markets (markets with "said", "mention", etc.)
-        mention_keywords = ["said", "say", "mention", "mentioned", "be said", "be mentioned"]
-        
+        # Filter for mention markets
+        # A mention market has "MENTION" in its ticker OR has a custom_strike field
         mention_markets = []
         for market in all_markets:
-            title = (market.get("title", "") + " " + market.get("subtitle", "")).lower()
+            ticker = market.get("ticker", "").upper()
+            custom_strike = market.get("custom_strike")
             
             # Check if it's a mention market
-            is_mention = any(keyword in title for keyword in mention_keywords)
+            is_mention = "MENTION" in ticker
             
-            # Also check category or event_ticker for earnings/events
-            category = market.get("category", "")
-            if "earnings" in category.lower() or "conference" in category.lower():
+            # Also include markets with custom_strike (bet words)
+            if custom_strike or market.get("strike_type") == "custom":
                 is_mention = True
             
             if is_mention:
@@ -110,8 +109,11 @@ def get_mention_markets_by_direct_search(api_key: str) -> List[Dict]:
                 
                 # Filter for mention markets
                 for market in markets:
-                    title = (market.get("title", "") + " " + market.get("subtitle", "")).lower()
-                    if any(kw in title for kw in ["said", "say", "mention"]):
+                    ticker = market.get("ticker", "").upper()
+                    custom_strike = market.get("custom_strike")
+                    
+                    is_mention = "MENTION" in ticker or custom_strike or market.get("strike_type") == "custom"
+                    if is_mention:
                         found_markets.append(market)
                 
                 time.sleep(0.2)  # Rate limit
