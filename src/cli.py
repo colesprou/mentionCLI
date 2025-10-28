@@ -488,6 +488,9 @@ class KalshiResearchCLI:
                     console.print(f"  Total Mentions Found: {research_result.historical_data['total_mentions']}")
                 if 'empirical_probabilities' in research_result.historical_data:
                     console.print(f"\n[bold yellow]📈 Historical Hit Rates (per earnings call):[/bold yellow]")
+                    quarters_count = research_result.historical_data.get('quarters_analyzed', 0)
+                    if quarters_count:
+                        console.print(f"[dim]  Based on {quarters_count} quarters of data[/dim]")
                     for term, prob in research_result.historical_data['empirical_probabilities'].items():
                         console.print(f"  • {term}: {prob:.1%} hit rate")
                 
@@ -950,6 +953,7 @@ class KalshiResearchCLI:
                 console.print(f"  [green]Hit Rate: {term_data['hit_rate']:.1%}[/green]")
                 console.print(f"  [green]Total Mentions: {term_data['total_mentions']}[/green]")
                 console.print(f"  [green]Quarters with Mentions: {term_data['quarters_with_mentions']}/{term_data['total_quarters_analyzed']}[/green]")
+                console.print(f"  [dim]Analyzing {quarters_back} quarters back[/dim]")
                 
                 # Show mentions by quarter with context
                 console.print(f"\n  [bold]Mentions by Quarter:[/bold]")
