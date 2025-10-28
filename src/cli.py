@@ -1844,6 +1844,8 @@ Based on the above context excerpts, please provide a brief summary (2-3 paragra
 3. What this suggests about the company's direction or priorities
 
 Note: The term "{search_term}" appears in the provided context excerpts above. Analyze the strategic and business implications based on these excerpts. Do NOT state that the term is not present - it is present in the provided context.
+
+IMPORTANT: Respond in plain text format only, not JSON. Just provide the analysis paragraphs directly.
 """
 
             # Generate AI summary
