@@ -171,11 +171,18 @@ def generate_high_volume_cache(api_key: str, min_volume: int = 50000):
     
     all_markets = list(unique_markets.values())
     
-    # Filter by volume
-    high_volume = [m for m in all_markets if m.get('volume', 0) >= min_volume]
+    # Filter by volume AND status (only active markets)
+    high_volume = [
+        m for m in all_markets 
+        if m.get('volume', 0) >= min_volume 
+        and m.get('status') == 'active'
+    ]
     
     # Sort by volume descending
     high_volume.sort(key=lambda x: x.get('volume', 0), reverse=True)
+    
+    # Limit to top 50-60 markets by volume to match Kalshi's display
+    high_volume = high_volume[:60]
     
     print(f"Found {len(high_volume)} high-volume mention markets (min volume: {min_volume:,})")
     
