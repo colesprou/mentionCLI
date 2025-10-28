@@ -481,7 +481,12 @@ class EarningsCallPipeline:
 # Example usage and testing
 async def main():
     """Example usage of the earnings call pipeline"""
-    api_key = "hvhh4S1RYUndqJNKcCzAvQ==auITJ6Np8Y2YeHrB"
+    import os
+    api_key = os.getenv('API_NINJAS_KEY')
+    
+    if not api_key:
+        print("Error: API_NINJAS_KEY not set in environment variables")
+        return
     
     pipeline = EarningsCallPipeline(api_key)
     
