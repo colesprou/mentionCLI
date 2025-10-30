@@ -1,8 +1,8 @@
-# MentionCLI - Kalshi Mention Market Research Tool 🎯
+# MentionCLI - Kalshi Mention Market Research Tool
 
 A powerful terminal-based research platform for analyzing Kalshi mention markets. Discover edge in prediction markets by analyzing historical patterns, AI-powered insights, and comprehensive data pipelines.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Installation
 
@@ -74,7 +74,7 @@ python main.py
    ```
    Search for terms in company transcripts
 
-## 🎯 Key Commands
+## Key Commands
 
 ### Market Commands
 
@@ -92,7 +92,7 @@ python main.py
 | `transcript view TICKER Q Y` | View full transcript | `transcript view SBUX 3 2025` |
 | `transcript download TICKER Q Y` | Download transcript | `transcript download SBUX 3 2025` |
 
-## 💡 Example Workflow
+## Example Workflow
 
 ### Analyzing Earnings Call Markets
 
@@ -125,17 +125,9 @@ python main.py
 
 4. **Search transcript manually:**
    ```
-   transcript search SBUX cold foam
+   transcript SBUX 2025 2
    ```
    Output: All instances with full context
-
-## 🎓 What is a "Mention Market"?
-
-Kalshi mention markets bet on whether specific **words** or **terms** will be mentioned during events like:
-
-- **Earnings calls:** "Will the CEO mention AI?"
-- **Press conferences:** "Will Powell say inflation?"
-- **Product launches:** "Will they mention security?"
 
 ## 📊 Key Features
 
@@ -160,36 +152,17 @@ Kalshi mention markets bet on whether specific **words** or **terms** will be me
 - Critical questions for traders
 - Smart context centering (ensures match is always included)
 
-## 🔍 Data Sources
+## Data Sources
 
 ### Earnings Calls
 - **API Ninjas** for transcripts
-- Look back up to 12 quarters
+- Look back up to 20 quarters
 - Real-time transcript fetching
 
 ### Events
 - Fed press conferences
 - Earnings calls
 - Political speeches
-
-## 🎯 Trading Strategy
-
-### Finding Edge
-
-1. **High hit rate, low market probability** → Buy YES
-2. **Low hit rate, high market probability** → Buy NO
-3. **Equal probabilities** → Pass (no edge)
-
-### Example Analysis
-
-```
-Term: "protein cold foam"
-Historical Hit Rate: 81.8%
-Market Price (YES): 45 cents
-Edge: 81.8% - 45% = 36.8% positive edge
-
-✅ Recommended: BUY YES at 45 cents
-```
 
 ## 📁 Project Structure
 
@@ -207,13 +180,6 @@ mentionCLI/
 └── README.md              # This file
 ```
 
-## 🐛 Troubleshooting
-
-### "Module not found"
-```bash
-pip install -r requirements.txt
-```
-
 ### "API key error"
 Check your `.env` file has correct API keys
 
@@ -223,7 +189,7 @@ Port 5000 is occupied. Try:
 PORT=5001 python run_web.py
 ```
 
-## 📝 API Keys
+## API Keys
 
 ### Required
 - **Kalshi API**: Get at [kalshi.com](https://kalshi.com)
@@ -232,14 +198,6 @@ PORT=5001 python run_web.py
 ### Optional
 - **OpenAI**: For AI analysis (get at [openai.com](https://openai.com))
 
-## 🚧 Development
-
-### Adding New Event Types
-
-1. Create pipeline in `src/event_pipelines.py`
-2. Add to CLI command handlers
-3. Update documentation
-
 ### Contributing
 
 1. Fork the repository
@@ -247,9 +205,6 @@ PORT=5001 python run_web.py
 3. Make changes
 4. Submit pull request
 
-## 📄 License
-
-MIT License - see LICENSE file for details
 
 ## 🤝 Support
 
