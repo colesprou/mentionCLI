@@ -290,29 +290,17 @@ class KalshiResearchCLI:
             task = progress.add_task("Loading high-volume mention markets...", total=None)
             
             try:
-                # Load the high-volume filtered data
+                # Always fetch fresh markets to get latest data
                 import json
                 import os
+                from accurate_mention_finder import get_active_mention_markets, get_mention_markets_by_direct_search, generate_high_volume_cache
                 
-                progress.update(task, description="Loading high-volume markets...")
+                progress.update(task, description="Fetching fresh markets from API...")
                 
-                # Try to load the high-volume data first
-                if os.path.exists('high_volume_mention_markets.json'):
-                    with open('high_volume_mention_markets.json', 'r') as f:
-                        all_markets = json.load(f)
-                    console.print(f"[green]Loaded {len(all_markets)} high-volume markets from cache[/green]")
-                else:
-                    # Fallback to the old method if high-volume data doesn't exist
-                    from accurate_mention_finder import get_active_mention_markets, get_mention_markets_by_direct_search
-                    
-                    progress.update(task, description="Finding active mention markets...")
-                    series_markets = get_active_mention_markets(self.config.kalshi_api_key)
-                    
-                    progress.update(task, description="Searching by ticker...")
-                    search_markets = get_mention_markets_by_direct_search(self.config.kalshi_api_key)
-                    
-                    # Combine and deduplicate
-                    all_markets = series_markets + search_markets
+                # Fetch fresh data and update cache
+                console.print("[blue]Refreshing markets cache...[/blue]")
+                all_markets = generate_high_volume_cache(self.config.kalshi_api_key, min_volume=1000)
+                console.print(f"[green]Fetched {len(all_markets)} active mention markets[/green]")
                 unique_markets = {}
                 for market in all_markets:
                     ticker = market.get('ticker')
