@@ -161,16 +161,101 @@ def load_cached_mention_markets(filename: str = "high_volume_mention_markets.jso
         return []
 
 
+def get_earnings_mention_markets_direct(api_key: str) -> List[Dict]:
+    """
+    Efficiently fetch earnings mention markets by searching for EARNINGSMENTION event_tickers directly.
+    This is much faster than fetching all markets.
+    
+    Args:
+        api_key: Kalshi API key
+        
+    Returns:
+        List of earnings mention market dictionaries
+    """
+    try:
+        headers = {"authorization": f"Bearer {api_key}"}
+        session = requests.Session()
+        
+        all_markets = []
+        cursor = ""
+        
+        # Search specifically for EARNINGSMENTION event_tickers
+        print("Searching for EARNINGSMENTION markets directly...")
+        consecutive_empty_batches = 0
+        max_empty_batches = 3  # Stop after 3 consecutive batches with no mention markets
+        
+        while True:
+            params = {"limit": 1000, "status": "open"}
+            if cursor:
+                params["cursor"] = cursor
+            
+            response = session.get(
+                "https://api.elections.kalshi.com/trade-api/v2/markets",
+                headers=headers,
+                params=params,
+                timeout=30
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            markets = data.get("markets", [])
+            
+            # Filter for EARNINGSMENTION markets immediately to reduce processing
+            mentions_in_batch = 0
+            for market in markets:
+                event_ticker = market.get("event_ticker", "").upper()
+                ticker = market.get("ticker", "").upper()
+                custom_strike = market.get("custom_strike")
+                
+                # Only keep mention markets
+                is_mention = ("EARNINGSMENTION" in event_ticker) or ("EARNINGSMENTION" in ticker) or \
+                            ("MENTION" in ticker and custom_strike) or \
+                            ("MENTION" in event_ticker and custom_strike)
+                
+                if is_mention and market.get('status') in ['open', 'active']:
+                    all_markets.append(market)
+                    mentions_in_batch += 1
+            
+            # Early exit optimization: stop after consecutive batches with no mention markets
+            # This assumes mention markets are grouped together
+            if mentions_in_batch == 0:
+                consecutive_empty_batches += 1
+                if consecutive_empty_batches >= max_empty_batches:
+                    print(f"Stopping early after {consecutive_empty_batches} consecutive batches with no mention markets")
+                    break
+            else:
+                consecutive_empty_batches = 0  # Reset counter if we found mentions
+            
+            next_cursor = data.get("cursor", "")
+            if not next_cursor or not markets:
+                break
+            cursor = next_cursor
+            
+            time.sleep(0.1)  # Reduced rate limit delay
+        
+        print(f"Found {len(all_markets)} mention markets via direct search")
+        return all_markets
+        
+    except Exception as e:
+        print(f"Error in direct earnings mention search: {e}")
+        return []
+
+
 def generate_high_volume_cache(api_key: str, min_volume: int = 0):
     """
     Generate a cache file with all mention markets (not filtered by volume to get all events).
+    Uses optimized direct search instead of fetching all markets.
     
     Args:
         api_key: Kalshi API key
         min_volume: Minimum volume threshold for inclusion (default 0 to get all)
     """
-    print("Fetching ALL mention markets (no volume filter to capture all events)...")
-    all_markets = get_active_mention_markets(api_key)
+    print("Fetching mention markets using optimized search...")
+    
+    # Use the optimized direct search (much faster)
+    all_markets = get_earnings_mention_markets_direct(api_key)
+    
+    # Also try the direct search method for any additional markets
     search_markets = get_mention_markets_by_direct_search(api_key)
     
     # Combine and deduplicate
@@ -183,7 +268,7 @@ def generate_high_volume_cache(api_key: str, min_volume: int = 0):
     
     all_markets = list(unique_markets.values())
     
-    # Filter by status only (only open/active markets)
+    # Filter by status only (only open/active markets) - should already be filtered but double-check
     active_markets = [
         m for m in all_markets 
         if m.get('status') in ['open', 'active']
