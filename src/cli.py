@@ -304,11 +304,16 @@ class KalshiResearchCLI:
                 if os.path.exists(cache_file):
                     cache_age = time.time() - os.path.getmtime(cache_file)
                     if cache_age < cache_age_threshold:
-                        should_refresh = False
                         progress.update(task, description="Loading from cache...")
                         with open(cache_file, 'r') as f:
                             all_markets = json.load(f)
-                        console.print(f"[green]Loaded {len(all_markets)} markets from cache (cache is {int(cache_age/60)} minutes old)[/green]")
+                        
+                        # If cache is empty, treat it as stale and refresh
+                        if len(all_markets) > 0:
+                            should_refresh = False
+                            console.print(f"[green]Loaded {len(all_markets)} markets from cache (cache is {int(cache_age/60)} minutes old)[/green]")
+                        else:
+                            console.print("[yellow]Cache is empty, refreshing...[/yellow]")
                 
                 # Refresh cache if needed
                 if should_refresh:
