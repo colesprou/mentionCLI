@@ -1560,49 +1560,43 @@ class KalshiResearchCLI:
             # Kelly fraction should be between 0 and 1
             if kelly_fraction < 0:
                 kelly_fraction = 0
-                edge = "No positive edge - don't bet"
             elif kelly_fraction > 1:
                 kelly_fraction = 1
-                edge = "Very high edge - max bet"
-            else:
-                # Edge as percentage of bet
-                edge_pct = (p * (1 + b) - 1) * 100
-                edge = f"Edge: {edge_pct:.2f}%"
             
             # Calculate bet amount
             bet_amount = bankroll * kelly_fraction
             
-            # Calculate expected value
-            expected_value = (p * (1 + b) - 1) * bet_amount
-            
-            # Display results
+            # Display results - focus on win probability and recommended bet
             table = Table(title="Kelly Criterion Betting Calculator", show_header=True, header_style="bold magenta")
             table.add_column("Metric", style="cyan", no_wrap=True)
             table.add_column("Value", style="green")
             
             table.add_row("Bankroll", f"${bankroll:,.2f}")
             table.add_row("Win Probability", f"{win_prob_percent:.1f}%")
+            
             if market_price is not None:
-                table.add_row("Market Price", f"{market_price:.1f} cents")
-                table.add_row("Odds (b)", f"{b:.3f}")
+                table.add_row("Market Price (assumed)", f"{market_price:.1f} cents")
             else:
-                table.add_row("Odds (b)", f"{b:.3f} (even odds)")
+                table.add_row("Market Price (assumed)", "[dim]Even odds (50 cents)[/dim]")
+            
             table.add_row("Kelly Fraction", f"{kelly_fraction:.4f} ({kelly_fraction*100:.2f}%)")
-            table.add_row("Recommended Bet", f"${bet_amount:,.2f}")
-            table.add_row("Expected Value", f"${expected_value:,.2f}")
-            table.add_row("", edge)
+            table.add_row("[bold]Recommended Bet[/bold]", f"[bold green]${bet_amount:,.2f}[/bold green]")
             
             console.print(table)
             
             # Additional recommendations
             if kelly_fraction == 0:
-                console.print("\n[yellow]⚠️  No positive expected value. Kelly Criterion recommends not betting.[/yellow]")
+                console.print("\n[yellow]⚠️  No positive edge. Kelly Criterion recommends not betting.[/yellow]")
             elif kelly_fraction > 0.25:
                 console.print("\n[yellow]⚠️  Kelly fraction is high (>25%). Consider using fractional Kelly (half-Kelly) for lower risk.[/yellow]")
                 half_kelly_bet = bankroll * (kelly_fraction / 2)
                 console.print(f"[yellow]Half-Kelly bet: ${half_kelly_bet:,.2f}[/yellow]")
             else:
-                console.print("\n[green]✓ Kelly Criterion recommends this bet size.[/green]")
+                console.print("\n[green]✓ Kelly Criterion recommends this bet size based on your win probability.[/green]")
+            
+            # Show assumptions note
+            if market_price is None:
+                console.print("\n[dim]Note: Assumed even odds (50/50 market). Specify market price for more accurate calculation.[/dim]")
                 
         except Exception as e:
             console.print(f"[red]Error calculating Kelly Criterion: {e}[/red]")
