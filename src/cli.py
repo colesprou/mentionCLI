@@ -122,6 +122,10 @@ class KalshiResearchCLI:
         • prices <market_id>       - Show price history
         • volume <market_id>       - Show volume data
         
+        💰 BETTING COMMANDS:
+        • kelly <bankroll> <win_prob%> [market_price] - Calculate optimal bet size using Kelly Criterion
+        • bankroll <bankroll> <win_prob%> [market_price] - Same as kelly (alternative command)
+        
         🛠️  UTILITY COMMANDS:
         • config                   - Show configuration
         • clear                    - Clear screen
@@ -1511,6 +1515,98 @@ class KalshiResearchCLI:
             except Exception as e:
                 console.print(f"[red]Error searching news: {e}[/red]")
     
+    def calculate_kelly(self, bankroll: float, win_prob_percent: float, market_price: float = None):
+        """
+        Calculate optimal bet size using Kelly Criterion.
+        
+        Kelly Criterion formula: f = (p * b - q) / b
+        Where:
+        - f = fraction of bankroll to bet
+        - p = probability of winning (as decimal)
+        - q = probability of losing (1 - p)
+        - b = net odds received on the wager
+        
+        For Kalshi markets:
+        - If market price is P cents, you pay P cents per share
+        - If you win, you get 100 cents (1 dollar) per share
+        - Net profit = (100 - P) cents per share
+        - So b = (100 - P) / P
+        
+        Args:
+            bankroll: Total bankroll amount
+            win_prob_percent: Win probability as a percentage (e.g., 50 for 50%)
+            market_price: Market price in cents (0-100). If None, assumes even odds (b=1)
+        """
+        try:
+            # Convert percentage to decimal
+            p = win_prob_percent / 100.0
+            q = 1 - p
+            
+            # Calculate odds based on market price
+            if market_price is not None:
+                # For Kalshi: if you buy at price P, you get (100-P) profit when you win
+                # So odds b = (100 - P) / P
+                if market_price <= 0 or market_price >= 100:
+                    console.print("[red]Market price must be between 1 and 99 cents.[/red]")
+                    return
+                b = (100 - market_price) / market_price
+            else:
+                # Even odds: you double your money if you win
+                b = 1.0
+            
+            # Kelly Criterion formula
+            kelly_fraction = (p * b - q) / b
+            
+            # Kelly fraction should be between 0 and 1
+            if kelly_fraction < 0:
+                kelly_fraction = 0
+                edge = "No positive edge - don't bet"
+            elif kelly_fraction > 1:
+                kelly_fraction = 1
+                edge = "Very high edge - max bet"
+            else:
+                # Edge as percentage of bet
+                edge_pct = (p * (1 + b) - 1) * 100
+                edge = f"Edge: {edge_pct:.2f}%"
+            
+            # Calculate bet amount
+            bet_amount = bankroll * kelly_fraction
+            
+            # Calculate expected value
+            expected_value = (p * (1 + b) - 1) * bet_amount
+            
+            # Display results
+            table = Table(title="Kelly Criterion Betting Calculator", show_header=True, header_style="bold magenta")
+            table.add_column("Metric", style="cyan", no_wrap=True)
+            table.add_column("Value", style="green")
+            
+            table.add_row("Bankroll", f"${bankroll:,.2f}")
+            table.add_row("Win Probability", f"{win_prob_percent:.1f}%")
+            if market_price is not None:
+                table.add_row("Market Price", f"{market_price:.1f} cents")
+                table.add_row("Odds (b)", f"{b:.3f}")
+            else:
+                table.add_row("Odds (b)", f"{b:.3f} (even odds)")
+            table.add_row("Kelly Fraction", f"{kelly_fraction:.4f} ({kelly_fraction*100:.2f}%)")
+            table.add_row("Recommended Bet", f"${bet_amount:,.2f}")
+            table.add_row("Expected Value", f"${expected_value:,.2f}")
+            table.add_row("", edge)
+            
+            console.print(table)
+            
+            # Additional recommendations
+            if kelly_fraction == 0:
+                console.print("\n[yellow]⚠️  No positive expected value. Kelly Criterion recommends not betting.[/yellow]")
+            elif kelly_fraction > 0.25:
+                console.print("\n[yellow]⚠️  Kelly fraction is high (>25%). Consider using fractional Kelly (half-Kelly) for lower risk.[/yellow]")
+                half_kelly_bet = bankroll * (kelly_fraction / 2)
+                console.print(f"[yellow]Half-Kelly bet: ${half_kelly_bet:,.2f}[/yellow]")
+            else:
+                console.print("\n[green]✓ Kelly Criterion recommends this bet size.[/green]")
+                
+        except Exception as e:
+            console.print(f"[red]Error calculating Kelly Criterion: {e}[/red]")
+    
     def show_config(self):
         """Show current configuration."""
         config_text = f"""
@@ -2074,6 +2170,38 @@ Please provide a clear, data-driven answer based on the transcript context and a
                 elif command.startswith('transcript '):
                     args = command[11:].strip()
                     await self.handle_transcript_command(args)
+                
+                elif command == 'kelly' or command == 'bankroll' or command.startswith('kelly ') or command.startswith('bankroll '):
+                    # Parse: kelly <bankroll> <win_prob_percent> [market_price]
+                    # Or: bankroll <bankroll> <win_prob_percent> [market_price]
+                    parts = command.split()
+                    if len(parts) >= 3:
+                        try:
+                            bankroll = float(parts[1])
+                            win_prob = float(parts[2])
+                            market_price = float(parts[3]) if len(parts) > 3 else None
+                            
+                            if bankroll <= 0:
+                                console.print("[red]Bankroll must be greater than 0.[/red]")
+                            elif win_prob < 0 or win_prob > 100:
+                                console.print("[red]Win probability must be between 0 and 100.[/red]")
+                            else:
+                                self.calculate_kelly(bankroll, win_prob, market_price)
+                        except ValueError:
+                            console.print("[red]Invalid numbers. Usage: kelly <bankroll> <win_prob%> [market_price_cents][/red]")
+                            console.print("[yellow]Example: kelly 1500 50[/yellow]")
+                            console.print("[yellow]Example: kelly 1500 60 45[/yellow] (bankroll $1500, 60% win prob, market at 45 cents)")
+                    else:
+                        console.print("[bold]Kelly Criterion Betting Calculator[/bold]")
+                        console.print("[yellow]Usage: kelly <bankroll> <win_prob%> [market_price_cents][/yellow]")
+                        console.print("\n[cyan]Arguments:[/cyan]")
+                        console.print("  • bankroll: Your total bankroll amount (e.g., 1500)")
+                        console.print("  • win_prob%: Your estimated win probability as percentage (e.g., 50 for 50%)")
+                        console.print("  • market_price: (Optional) Market price in cents (1-99). If omitted, assumes even odds.")
+                        console.print("\n[cyan]Examples:[/cyan]")
+                        console.print("  • [green]kelly 1500 50[/green] - Bankroll $1500, 50% win prob, even odds")
+                        console.print("  • [green]kelly 1500 60 45[/green] - Bankroll $1500, 60% win prob, market at 45 cents")
+                        console.print("  • [green]bankroll 2000 55 30[/green] - Bankroll $2000, 55% win prob, market at 30 cents")
                 
                 elif command == 'url':
                     url = input("Enter Kalshi market URL: ").strip()
