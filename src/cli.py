@@ -123,8 +123,9 @@ class KalshiResearchCLI:
         • volume <market_id>       - Show volume data
         
         💰 BETTING COMMANDS:
-        • kelly <bankroll> <win_prob%> [market_price] - Calculate optimal bet size using Kelly Criterion
-        • bankroll <bankroll> <win_prob%> [market_price] - Same as kelly (alternative command)
+        • kelly <bankroll> <win_prob%> [market_price] [fraction] - Calculate optimal bet size using Kelly Criterion
+        • bankroll <bankroll> <win_prob%> [market_price] [fraction] - Same as kelly (alternative command)
+        • Use 0.5 for half-Kelly, 0.33 for third-Kelly, etc.
         
         🛠️  UTILITY COMMANDS:
         • config                   - Show configuration
@@ -1515,7 +1516,7 @@ class KalshiResearchCLI:
             except Exception as e:
                 console.print(f"[red]Error searching news: {e}[/red]")
     
-    def calculate_kelly(self, bankroll: float, win_prob_percent: float, market_price: float = None):
+    def calculate_kelly(self, bankroll: float, win_prob_percent: float, market_price: float = None, fractional_kelly: float = 1.0):
         """
         Calculate optimal bet size using Kelly Criterion.
         
@@ -1536,6 +1537,7 @@ class KalshiResearchCLI:
             bankroll: Total bankroll amount
             win_prob_percent: Win probability as a percentage (e.g., 50 for 50%)
             market_price: Market price in cents (0-100). If None, assumes even odds (b=1)
+            fractional_kelly: Fraction of full Kelly to use (e.g., 0.5 for half-Kelly, 0.33 for third-Kelly)
         """
         try:
             # Convert percentage to decimal
@@ -1563,11 +1565,16 @@ class KalshiResearchCLI:
             elif kelly_fraction > 1:
                 kelly_fraction = 1
             
-            # Calculate bet amount
-            bet_amount = bankroll * kelly_fraction
+            # Apply fractional Kelly if specified
+            adjusted_kelly_fraction = kelly_fraction * fractional_kelly
+            bet_amount = bankroll * adjusted_kelly_fraction
+            full_kelly_bet = bankroll * kelly_fraction
             
             # Display results - focus on win probability and recommended bet
-            table = Table(title="Kelly Criterion Betting Calculator", show_header=True, header_style="bold magenta")
+            title = "Kelly Criterion Betting Calculator"
+            if fractional_kelly < 1.0:
+                title += f" ({fractional_kelly*100:.0f}% Kelly)"
+            table = Table(title=title, show_header=True, header_style="bold magenta")
             table.add_column("Metric", style="cyan", no_wrap=True)
             table.add_column("Value", style="green")
             
@@ -1579,8 +1586,14 @@ class KalshiResearchCLI:
             else:
                 table.add_row("Market Price (assumed)", "[dim]Even odds (50 cents)[/dim]")
             
-            table.add_row("Kelly Fraction", f"{kelly_fraction:.4f} ({kelly_fraction*100:.2f}%)")
-            table.add_row("[bold]Recommended Bet[/bold]", f"[bold green]${bet_amount:,.2f}[/bold green]")
+            table.add_row("Full Kelly Fraction", f"{kelly_fraction:.4f} ({kelly_fraction*100:.2f}%)")
+            if fractional_kelly < 1.0:
+                table.add_row("Fractional Kelly", f"{fractional_kelly:.2f}x ({fractional_kelly*100:.0f}%)")
+                table.add_row("Adjusted Kelly Fraction", f"{adjusted_kelly_fraction:.4f} ({adjusted_kelly_fraction*100:.2f}%)")
+                table.add_row("[bold]Recommended Bet (Fractional)[/bold]", f"[bold green]${bet_amount:,.2f}[/bold green]")
+                table.add_row("Full Kelly Bet (for reference)", f"[dim]${full_kelly_bet:,.2f}[/dim]")
+            else:
+                table.add_row("[bold]Recommended Bet[/bold]", f"[bold green]${bet_amount:,.2f}[/bold green]")
             
             console.print(table)
             
@@ -2166,36 +2179,65 @@ Please provide a clear, data-driven answer based on the transcript context and a
                     await self.handle_transcript_command(args)
                 
                 elif command == 'kelly' or command == 'bankroll' or command.startswith('kelly ') or command.startswith('bankroll '):
-                    # Parse: kelly <bankroll> <win_prob_percent> [market_price]
-                    # Or: bankroll <bankroll> <win_prob_percent> [market_price]
+                    # Parse: kelly <bankroll> <win_prob_percent> [market_price] [fraction]
+                    # Or: bankroll <bankroll> <win_prob_percent> [market_price] [fraction]
+                    # If 3 params: bankroll, win_prob, (market_price if >= 1, or fraction if < 1)
+                    # If 4 params: bankroll, win_prob, market_price, fraction
                     parts = command.split()
                     if len(parts) >= 3:
                         try:
                             bankroll = float(parts[1])
                             win_prob = float(parts[2])
-                            market_price = float(parts[3]) if len(parts) > 3 else None
+                            market_price = None
+                            fractional_kelly = 1.0
+                            
+                            if len(parts) == 3:
+                                # 3 params: bankroll, win_prob only (no market price or fraction)
+                                pass
+                            elif len(parts) == 4:
+                                # 4 params: bankroll, win_prob, and one more (either market_price OR fraction)
+                                third_param = float(parts[3])
+                                if third_param >= 1:
+                                    # Market price (must be 1-99)
+                                    market_price = third_param
+                                else:
+                                    # Fraction (must be 0-1)
+                                    fractional_kelly = third_param
+                            elif len(parts) >= 5:
+                                # 5+ params: bankroll, win_prob, market_price, fraction
+                                market_price = float(parts[3])
+                                fractional_kelly = float(parts[4])
                             
                             if bankroll <= 0:
                                 console.print("[red]Bankroll must be greater than 0.[/red]")
                             elif win_prob < 0 or win_prob > 100:
                                 console.print("[red]Win probability must be between 0 and 100.[/red]")
+                            elif market_price is not None and (market_price <= 0 or market_price >= 100):
+                                console.print("[red]Market price must be between 1 and 99 cents.[/red]")
+                            elif fractional_kelly <= 0 or fractional_kelly > 1:
+                                console.print("[red]Fractional Kelly must be between 0 and 1 (e.g., 0.5 for half-Kelly).[/red]")
                             else:
-                                self.calculate_kelly(bankroll, win_prob, market_price)
-                        except ValueError:
-                            console.print("[red]Invalid numbers. Usage: kelly <bankroll> <win_prob%> [market_price_cents][/red]")
+                                self.calculate_kelly(bankroll, win_prob, market_price, fractional_kelly)
+                        except (ValueError, IndexError):
+                            console.print("[red]Invalid numbers. Usage: kelly <bankroll> <win_prob%> [market_price] [fraction][/red]")
                             console.print("[yellow]Example: kelly 1500 50[/yellow]")
-                            console.print("[yellow]Example: kelly 1500 60 45[/yellow] (bankroll $1500, 60% win prob, market at 45 cents)")
+                            console.print("[yellow]Example: kelly 1500 50 0.5[/yellow] (half-Kelly)")
+                            console.print("[yellow]Example: kelly 1500 60 45[/yellow] (market at 45 cents)")
+                            console.print("[yellow]Example: kelly 1500 60 45 0.5[/yellow] (half-Kelly at 45 cents)")
                     else:
                         console.print("[bold]Kelly Criterion Betting Calculator[/bold]")
-                        console.print("[yellow]Usage: kelly <bankroll> <win_prob%> [market_price_cents][/yellow]")
+                        console.print("[yellow]Usage: kelly <bankroll> <win_prob%> [market_price] [fraction][/yellow]")
                         console.print("\n[cyan]Arguments:[/cyan]")
                         console.print("  • bankroll: Your total bankroll amount (e.g., 1500)")
                         console.print("  • win_prob%: Your estimated win probability as percentage (e.g., 50 for 50%)")
                         console.print("  • market_price: (Optional) Market price in cents (1-99). If omitted, assumes even odds.")
+                        console.print("  • fraction: (Optional) Fraction of full Kelly (0-1). Use 0.5 for half-Kelly, 0.33 for third-Kelly, etc.")
                         console.print("\n[cyan]Examples:[/cyan]")
-                        console.print("  • [green]kelly 1500 50[/green] - Bankroll $1500, 50% win prob, even odds")
-                        console.print("  • [green]kelly 1500 60 45[/green] - Bankroll $1500, 60% win prob, market at 45 cents")
-                        console.print("  • [green]bankroll 2000 55 30[/green] - Bankroll $2000, 55% win prob, market at 30 cents")
+                        console.print("  • [green]kelly 1500 50[/green] - Full Kelly, 50% win prob, even odds")
+                        console.print("  • [green]kelly 1500 50 0.5[/green] - Half-Kelly, 50% win prob, even odds")
+                        console.print("  • [green]kelly 1500 60 45[/green] - Full Kelly, 60% win prob, market at 45 cents")
+                        console.print("  • [green]kelly 1500 60 45 0.5[/green] - Half-Kelly, 60% win prob, market at 45 cents")
+                        console.print("  • [green]kelly 1500 50 0.33[/green] - Third-Kelly, 50% win prob, even odds")
                 
                 elif command == 'url':
                     url = input("Enter Kalshi market URL: ").strip()
